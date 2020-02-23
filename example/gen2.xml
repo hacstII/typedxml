@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+  <root_var_str>Some text</root_var_str>
+  <root_var_int>147</root_var_int>
+  <root_var_float>5.31</root_var_float>
+  <Group>
+    <sub_var_str>text in group</sub_var_str>
+    <sub_var_int>258</sub_var_int>
+    <sub_var_float>9.63</sub_var_float>
+  </Group>
+  <Group2>
+    <sub2_var_str>text in group2</sub2_var_str>
+    <sub2_var_int>369</sub2_var_int>
+    <sub2_var_float>0.12</sub2_var_float>
+  </Group2>
+</root>
