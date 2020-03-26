@@ -2,8 +2,6 @@
 from __future__ import annotations
 from .common_header import *
 
-Label = Union[str, int]
-
 
 def get_unique_label(con: Container[str], expected_str: str) -> Tuple[str, int]:
     if expected_str not in con:
@@ -53,11 +51,16 @@ class ParseType:
 
 
 class XmlTemplate:
-    _dict_of_all_template: Dict[str, XmlTemplate] = OrderedDict()
+    _current_scope: ClassVar[str] = 'default_scope'
+    # _dict_of_scope: ClassVar[Dict, Dict] = OrderedDict()
+    # _dict_of_templates: ClassVar[Dict[str, XmlTemplate]] = OrderedDict()
+    _dict_of_scope: ClassVar[Dict, Dict]
+    _dict_of_templates: ClassVar[Dict[str, XmlTemplate]]
 
     def __init__(self, name: str):
+        # TODO adding optional paramters
         self.name = name  # The default name for this in xml file's node, The generated class name
-        self.labels = ('',)
+        self.labels: Tuple[str, ...] = ('',)
         self.params: List[Union[XmlParam, XmlNode, XmlNodeDummy]] = []
         self.special_class = None
         self.comment = ''
@@ -101,14 +104,14 @@ class XmlTemplate:
     @classmethod
     def _add_template_dict(cls, key: str, value: XmlTemplate):
         # TODO check key already exists
-        cls._dict_of_all_template[key] = value
+        cls._dict_of_templates[key] = value
 
     @classmethod
     def get_template_dict_value(cls, key: str) -> Optional[XmlTemplate]:
-        return cls._dict_of_all_template.get(key, None)
+        return cls._dict_of_templates.get(key, None)
 
     @classmethod
-    def read_xml(cls, xmlnode: XmlNode, param_class: Optional[type], xml_path, param_ins_dict: Optional[Dict[str, Any]] = None, param_ins=None, prog_ind=0):
+    def read_xml(cls, xmlnode: XmlNode, param_class: Optional[type], xml_path, param_ins_dict: Optional[Dict[str, Any]] = None, param_ins=None, prog_ind=-1):
         XmlNode.reset_set_ins_mark()
         et: ElementTree = etree.parse(xml_path)
         node_root: Element = et.getroot()
@@ -119,17 +122,12 @@ class XmlTemplate:
             param_ins_dict = OrderedDict()
 
         if param_class is None:
-            param_class_nn: type = EmptyClass
+            param_class_nn: type = EmptyClass  # param_class not None
         else:
             param_class_nn = param_class
 
         if param_ins is None:
             param_ins = param_class_nn()
-            # if param_class is None:
-            #     param_ins = EmptyClass()
-            #     param_class = EmptyClass
-            # else:
-            #     param_ins = param_class()
         if not isinstance(param_ins, param_class_nn):
             raise
 
@@ -138,7 +136,29 @@ class XmlTemplate:
         xmlnode.read_xml_element(node_root, param_ins, param_ins_dict, '', prog_ind=prog_ind)
         return param_ins
 
-    # @classmethod
+    @classmethod
+    def get_scope(cls) -> str:
+        return cls._current_scope
+
+    @classmethod
+    def add_scope(cls, scope: str):
+        if scope in cls._dict_of_scope:
+            raise
+        cls._dict_of_scope[scope] = OrderedDict()
+        cls.set_scope(scope)
+
+    @classmethod
+    def set_scope(cls, scope: str):
+        if scope not in cls._dict_of_scope:
+            raise
+        cls._current_scope = scope
+        cls._dict_of_templates = cls._dict_of_scope[cls._current_scope]
+
+    @classmethod
+    def _init_cls(cls):
+        cls._dict_of_scope = OrderedDict()
+        cls._dict_of_templates = OrderedDict()
+        cls._dict_of_scope[cls._current_scope] = cls._dict_of_templates
 
 
 class ParamT:
@@ -158,6 +178,7 @@ class ParamT:
 
     @classmethod
     def convert_value(cls, value_in):
+        # TODO convert value to self.type
         return value_in
 
     def read_one_line(self, data_node: Element):
@@ -205,9 +226,9 @@ class ParamT:
             if self.parse_type.is_ndarray:
                 return read_arr
             elif self.parse_type.iter_type is not None:
-                return self.parse_type.iter_type(read_arr)
+                return self.parse_type.iter_type(self.parse_type.final_type(ele) for ele in read_arr)
             else:
-                return read_arr[0]
+                return self.parse_type.final_type(read_arr[0])
 
     def get_value(self, parent_node: Element, element_name: str):
         ele_list: List[Element] = parent_node.findall(element_name)
@@ -262,9 +283,10 @@ class ParamT:
             raise
         return parse_type
 
+
 class XmlParam:
-    def __init__(self, param_type: ParamT, xml_name: str, default_value: Any = None, var_name: Optional[str] = None, is_read: T_bool = True,
-                 can_default: T_bool = True, comment: Optional[str] = None):
+    def __init__(self, param_type: ParamT, xml_name: str, default_value: Any = None, var_name: Optional[str] = None, is_read: TBool = True,
+                 can_default: TBool = True, comment: Optional[str] = None):
         self.param_type = param_type
         self.xml_name = xml_name  # element name in xml
         if var_name is None:  # variable name in parameter class
@@ -311,6 +333,7 @@ class XmlParam:
         return ret_value
 
     def get_can_default(self, label_index=0, prog_ind: int = 0):
+        # FIXME should only be related with label_index
         if isinstance(self.can_default, dict):
             tuple_or_value = self.can_default[label_index]
         else:
@@ -328,11 +351,12 @@ class XmlParam:
             ret_value = self.default_value
         return ret_value
 
+
 class XmlNodeDummy:
     '''
     used to postpone initialization of XmlNode
     '''
-    def __init__(self, xml_template_mark: str, node_name=None, var_name=None, label_index=0, is_read: T_bool = True, can_default: T_bool = True, comment: Optional[str] = None):
+    def __init__(self, xml_template_mark: str, node_name=None, var_name=None, label_index=0, is_read: TBool = True, can_default: TBool = True, comment: Optional[str] = None):
         self.xml_template_mark = xml_template_mark
         self.node_name = node_name
         self.var_name = var_name
@@ -348,40 +372,41 @@ class XmlNodeDummy:
         else:
             return XmlNode(xml_template, self.node_name, self.var_name, self.label_index, self.is_read, self.can_default, self.comment)
 
-#TODO
+# TODO
+
 
 class XmlNode:
     _set_ins_mark: ClassVar[Set[str]] = set()  # set of instance of name
 
-    def __init__(self, xml_template: XmlTemplate, node_name=None, var_name=None, label_index=0, is_read: T_bool = True, can_default: T_bool = True, comment: Optional[str] = None):
+    def __init__(self, xml_template: XmlTemplate, node_name: Optional[str] = None, var_name: Optional[str] = None, label_index: Union[Label, Dict[str, Label], Self] = 0, is_read: TBool = True, can_default: DBool = True, comment: Optional[DStr] = None):
 
-        self.xml_template = xml_template
+        self.xml_template: XmlTemplate = xml_template
         if node_name is None:
-            self.node_name = xml_template.name
+            self.node_name: str = xml_template.name
         else:
             self.node_name = node_name
         """
         node_name: The node name in XML
         """
         if var_name is None:
-            self.var_name = self.get_node_name().lower()
+            self.var_name: str = self.get_node_name().lower()
         else:
             self.var_name = var_name
         """
         the name of the variable in Parent Template definition, default is the lower case of the
         """
-        self.label_index = label_index  # one type, two xml node; only one value
+        self.label_index: Union[Label, Dict[str, Label], Self] = label_index  # one type, two xml node; only one value
         """
         The label_index of self.xml_template to realized
         str or int or Self or Dict, if is int, the corresponding string is self.xml_template.labels[int]
         """
-        self.is_read = is_read  # one config, two prog; can be Tuple[bool] or [bool]
+        self.is_read: TBool = is_read  # one config, two prog; can be Tuple[bool] or [bool]
 
-        self.can_default = can_default
-        self.comment = comment
+        self.can_default: DBool = can_default
+        self.comment: Optional[DStr] = comment
         # self.ulabel = ulabel
 
-    def read_xml_element(self, element: Optional[Element], param_ins, param_ins_dict: Dict, upper_ins_mark: str, upper_template_label: Optional[str] = None, prog_ind=0):
+    def read_xml_element(self, element: Optional[Element], param_ins, param_ins_dict: Dict, upper_ins_mark: str, upper_template_label: Optional[str] = None, prog_ind=-1):
         """
         Set value to param_ins by reading Element,
         set the node_label of the param_ins and save the node_label to _set_ins_name and adds the relation to param_ins_dict
@@ -424,7 +449,7 @@ class XmlNode:
             member: Union[XmlParam, XmlNode, XmlNodeDummy]
             for member in self.xml_template.params:
                 if isinstance(member, XmlParam):
-                    member.read_xml(element, param_ins, self.label_index, prog_ind)
+                    member.read_xml(element, param_ins, real_template_label, prog_ind)
                 elif isinstance(member, XmlNode):
                     if member.get_is_read(prog_ind):
                         if member.var_name not in param_ins.__dir__():
@@ -450,11 +475,29 @@ class XmlNode:
         return param_ins
             # return None
 
-    def get_real_template_label(self, upper_template_label: Optional[str] = None):
-        # TODO from upper_ins_label get the real ins_label
-        return None
+    def get_real_template_label(self, upper_template_label: Optional[str] = None) -> str:
+        # get the real string label of this node
+        if isinstance(self.label_index, dict):
+            if upper_template_label is None:
+                raise
+            label_index: Label = self.label_index[upper_template_label]
+            if isinstance(label_index, int):
+                return self.xml_template.labels[label_index]
+        elif isinstance(self.label_index, Self):
+            if upper_template_label is None:
+                raise
+            return upper_template_label
 
-    def get_is_read(self, prog_ind: int = 0):
+        elif isinstance(self.label_index, str):
+            return self.label_index
+        elif isinstance(self.label_index, int):
+            return self.xml_template.labels[self.label_index]
+        else:
+            raise
+
+    def get_is_read(self, prog_ind: int = -1) -> bool:
+        if prog_ind < 0:
+            return True
         if isinstance(self.is_read, tuple):
             return self.is_read[prog_ind]
         else:

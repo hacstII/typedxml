@@ -11,7 +11,13 @@ import warnings
 ElementTree = etree._ElementTree
 Element = etree._Element
 
-T_bool = Union[Tuple[bool], bool]
+TBool = Union[Tuple[bool], bool]
+
+Label = Union[str, int]
+DBool = Union[Dict[Label, bool], bool]
+DStr = Union[Dict[Label, str], str]
+DAny = Union[Dict[Label, Any], Any]
+
 
 
 # T = TypeVar('T')
