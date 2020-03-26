@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-from xml_template import *
+from typedxml import *
 from collections import OrderedDict
 
 
 class InsClass:
     def __init__(self):
+        self._ins_mark = ''
+        self._parent_ins_mark = ''
         self.root_var_str = ''
         self.root_var_int = 0
         self.root_var_float = 0.0

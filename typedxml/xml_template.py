@@ -397,8 +397,8 @@ class XmlNode:
         """
         self.label_index: Union[Label, Dict[str, Label], Self] = label_index  # one type, two xml node; only one value
         """
-        The label_index of self.xml_template to realized
-        str or int or Self or Dict, if is int, the corresponding string is self.xml_template.labels[int]
+        The label_index of self.typedxml to realized
+        str or int or Self or Dict, if is int, the corresponding string is self.typedxml.labels[int]
         """
         self.is_read: TBool = is_read  # one config, two prog; can be Tuple[bool] or [bool]
 
@@ -419,7 +419,7 @@ class XmlNode:
         :param prog_ind:
         :return:
         """
-        # TODO if xml_template is still string, refresh
+        # TODO if typedxml is still string, refresh
 
         if element is None:
             if not self.get_can_default(upper_template_label, prog_ind):
@@ -530,7 +530,7 @@ class XmlNode:
         cls._set_ins_mark.add(ins_mark)
 
     def refresh(self):
-        # TODO if xml_template is still string, refresh
+        # TODO if typedxml is still string, refresh
         pass
 
 
