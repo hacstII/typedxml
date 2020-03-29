@@ -1,23 +1,35 @@
 # -*- coding: utf-8 -*-
 # from __future__ import annotations
-from typing import Tuple, List, Any, Optional, Union, TypeVar, Generic, Iterable, Dict, Type, ClassVar, Set, Container
+from typing import Tuple, List, Any, Optional, Union, TypeVar, Generic, Iterable, Dict, Type, ClassVar, Set, Container, Collection
 from typing_extensions import Literal
 import numpy as np
 from lxml import etree
 from collections import OrderedDict, abc
 import warnings
+import re
 
 
 ElementTree = etree._ElementTree
 Element = etree._Element
 
 TBool = Union[Tuple[bool], bool]
+T = TypeVar('T')
 
-Label = Union[str, int]
-DBool = Union[Dict[Label, bool], bool]
-DStr = Union[Dict[Label, str], str]
-DAny = Union[Dict[Label, Any], Any]
+MLabel = Union[str, int]
+IDBool = Union[Dict[MLabel, bool], bool]
+IDStr = Union[Dict[MLabel, str], str]
+IDAny = Union[Dict[MLabel, Any], Any]
 
+DBool = Union[Dict[str, bool], bool]
+DStr = Union[Dict[str, str], str]
+DAny = Union[Dict[str, Any], Any]
+
+CInt = Union[Collection[int], int]
+
+
+
+class TypedxmlException(Exception):
+    pass
 
 
 # T = TypeVar('T')
